@@ -609,7 +609,7 @@
                                 let waktuDibuat = row[idxWaktuDibuat] ? String(row[idxWaktuDibuat]).trim() : '-';
                                 let namaGudang = row[idxGudang] !== undefined && row[idxGudang] !== null ? String(row[idxGudang]).trim() : '';
 
-                                if (toko.id === 'fileFashion' || !namaGudang || namaGudang === '0' || namaGudang === '-') {
+                                if (toko.id !== 'fileSPM' || !namaGudang || namaGudang === '0' || namaGudang === '-') {
                                     namaGudang = 'YOS STREAMVERSE';
                                 }
 
