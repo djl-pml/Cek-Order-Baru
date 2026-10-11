@@ -45,6 +45,25 @@
             margin-bottom: 20px;
         }
 
+        .view-switcher {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 0 0 24px;
+        }
+
+        .view-switcher button {
+            background: #1e293b;
+            border: 1px solid var(--border);
+            color: #cbd5e1;
+        }
+
+        .view-switcher button[aria-pressed="true"] {
+            background: linear-gradient(135deg, var(--secondary), var(--primary));
+            border-color: transparent;
+            color: #000;
+        }
+
         .card {
             background-color: var(--card-bg);
             border: 1px solid var(--border);
@@ -187,13 +206,25 @@
         }
 
         .hidden { display: none; }
+
+        @media (max-width: 700px) {
+            body { padding: 14px; }
+            .upload-grid { grid-template-columns: 1fr; }
+            .view-switcher button { padding: 10px 16px; }
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Cek Order TikTok Baru</h1>
+    <h1>Cek Order TikTok</h1>
 
+    <nav class="view-switcher" aria-label="Pilih jenis pengecekan">
+        <button type="button" id="newOrderTab" aria-controls="newOrderView" aria-pressed="true" onclick="switchOrderView('new')">Cek Order Baru</button>
+        <button type="button" id="cancelOrderTab" aria-controls="cancelOrderView" aria-pressed="false" onclick="switchOrderView('cancel')">Cek Order Batal</button>
+    </nav>
+
+    <section id="newOrderView" aria-labelledby="newOrderTab">
     <div class="upload-grid">
         <!-- Input Data Lama -->
         <div class="card">
@@ -219,7 +250,69 @@
         <button onclick="prosesPengecekan()">PROSES CEK ORDER</button>
     </div>
 
-    <section class="card" aria-labelledby="cancelCheckTitle">
+    <!-- Panel Hasil -->
+    <div id="resultPanel" class="hidden">
+    <div class="summary-grid">
+        <div class="stat-card">
+            <div>Total Order (Unik)</div>
+            <div class="number stat-total" id="statTotal">0</div>
+        </div>
+        <div class="stat-card">
+            <div>SUDAH INFO</div>
+            <div class="number stat-sudah" id="statSudah">0</div>
+        </div>
+        <div class="stat-card">
+            <div>BELUM INFO</div>
+            <div class="number stat-belum" id="statBelum">0</div>
+        </div>
+    </div>
+
+    <div style="margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center;">
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; flex: 1; min-width: 260px;">
+            <input type="text" id="searchInput" onkeyup="applyFilters()" placeholder="Cari No Order / Cabang / Status..." style="width: 300px; margin-bottom: 0;">
+            <select id="statusFilter" onchange="applyFilters()" style="padding: 8px; background-color: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: #fff;">
+                <option value="all">Semua Status</option>
+                <option value="SUDAH INFO">SUDAH INFO</option>
+                <option value="BELUM INFO">BELUM INFO</option>
+            </select>
+            <select id="sortSelect" onchange="applyFilters()" style="padding: 8px; background-color: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: #fff;">
+                <option value="order-asc">No Order A-Z</option>
+                <option value="order-desc">No Order Z-A</option>
+                <option value="status-desc">Status: Sudah Info dahulu</option>
+                <option value="status-asc">Status: Belum Info dahulu</option>
+                <option value="time-newest">Waktu Pesan Baru</option>
+                <option value="time-oldest">Waktu Pesan Lama</option>
+            </select>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <select id="whatsappSheetSelect" aria-label="Pilih sheet untuk pesan WhatsApp" style="padding: 8px; background-color: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: #fff;">
+                <option value="">Pilih cabang</option>
+            </select>
+            <button onclick="openWhatsAppTemplate()" style="padding: 8px 16px; font-size: 0.9rem; background: linear-gradient(135deg, #16a34a, #15803d);">Buka WhatsApp</button>
+            <button onclick="copyVisibleResults()" style="padding: 8px 16px; font-size: 0.9rem; background: linear-gradient(135deg, #4facfe, #00f2fe);">Copy Hasil</button>
+            <button onclick="resetFilters()" style="padding: 8px 16px; font-size: 0.9rem; background: #475569; color: #fff;">Reset</button>
+            <button onclick="exportToExcel()" style="padding: 8px 16px; font-size: 0.9rem;">Export Hasil ke Excel</button>
+        </div>
+    </div>
+    <p style="margin: -2px 0 12px; color:#94a3b8; font-size:0.85rem;">Pesan dibuat dari data cabang yang dipilih. Di WhatsApp, pilih grup tujuan lalu tekan kirim.</p>
+
+    <div class="table-container">
+        <table id="resultTable">
+            <thead>
+                <tr>
+                    <th>NO ORDER</th>
+                    <th>NAMA GUDANG / CABANG</th>
+                    <th>WAKTU PESANAN DIBUAT</th>
+                    <th>STATUS INFO</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+    </div>
+    </section>
+
+    <section id="cancelOrderView" class="card hidden" aria-labelledby="cancelCheckTitle">
         <h2 id="cancelCheckTitle">Cek Order Batal TikTok</h2>
         <p style="color:#94a3b8;">Upload semua file untuk mencocokan data order batal dengan status OMS.</p>
         <p style="color:#94a3b8; font-size:0.85rem;">
@@ -269,67 +362,6 @@
         </div>
     </section>
 
-    <!-- Panel Hasil -->
-    <div id="resultPanel" class="hidden">
-        <div class="summary-grid">
-            <div class="stat-card">
-                <div>Total Order (Unik)</div>
-                <div class="number stat-total" id="statTotal">0</div>
-            </div>
-            <div class="stat-card">
-                <div>SUDAH INFO</div>
-                <div class="number stat-sudah" id="statSudah">0</div>
-            </div>
-            <div class="stat-card">
-                <div>BELUM INFO</div>
-                <div class="number stat-belum" id="statBelum">0</div>
-            </div>
-        </div>
-
-        <div style="margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center;">
-            <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; flex: 1; min-width: 260px;">
-                <input type="text" id="searchInput" onkeyup="applyFilters()" placeholder="Cari No Order / Cabang / Status..." style="width: 300px; margin-bottom: 0;">
-                <select id="statusFilter" onchange="applyFilters()" style="padding: 8px; background-color: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: #fff;">
-                    <option value="all">Semua Status</option>
-                    <option value="SUDAH INFO">SUDAH INFO</option>
-                    <option value="BELUM INFO">BELUM INFO</option>
-                </select>
-                <select id="sortSelect" onchange="applyFilters()" style="padding: 8px; background-color: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: #fff;">
-                    <option value="order-asc">No Order A-Z</option>
-                    <option value="order-desc">No Order Z-A</option>
-                    <option value="status-desc">Status: Sudah Info dahulu</option>
-                    <option value="status-asc">Status: Belum Info dahulu</option>
-                    <option value="time-newest">Waktu Pesan Baru</option>
-                    <option value="time-oldest">Waktu Pesan Lama</option>
-                </select>
-            </div>
-            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <select id="whatsappSheetSelect" aria-label="Pilih sheet untuk pesan WhatsApp" style="padding: 8px; background-color: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: #fff;">
-                    <option value="">Pilih cabang</option>
-                </select>
-                <button onclick="openWhatsAppTemplate()" style="padding: 8px 16px; font-size: 0.9rem; background: linear-gradient(135deg, #16a34a, #15803d);">Buka WhatsApp</button>
-                <button onclick="copyVisibleResults()" style="padding: 8px 16px; font-size: 0.9rem; background: linear-gradient(135deg, #4facfe, #00f2fe);">Copy Hasil</button>
-                <button onclick="resetFilters()" style="padding: 8px 16px; font-size: 0.9rem; background: #475569; color: #fff;">Reset</button>
-                <button onclick="exportToExcel()" style="padding: 8px 16px; font-size: 0.9rem;">Export Hasil ke Excel</button>
-            </div>
-        </div>
-        <p style="margin: -2px 0 12px; color:#94a3b8; font-size:0.85rem;">Pesan dibuat dari data cabang yang dipilih. Di WhatsApp, pilih grup tujuan lalu tekan kirim.</p>
-
-        <div class="table-container">
-            <table id="resultTable">
-                <thead>
-                    <tr>
-                        <th>NO ORDER</th>
-                        <th>NAMA GUDANG / CABANG</th>
-                        <th>WAKTU PESANAN DIBUAT</th>
-                        <th>STATUS INFO</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody"></tbody>
-            </table>
-        </div>
-    </div>
-
     <!-- Footer Copyright -->
     <div class="footer-copyright">
          Copyright &copy; 2026 . <span>Sholehudien Moscovitz</span>.
@@ -339,6 +371,14 @@
 <script>
     let processedData = [];
     let cancelledOrdersData = [];
+
+    function switchOrderView(view) {
+        const showNewOrders = view === 'new';
+        document.getElementById('newOrderView').classList.toggle('hidden', !showNewOrders);
+        document.getElementById('cancelOrderView').classList.toggle('hidden', showNewOrders);
+        document.getElementById('newOrderTab').setAttribute('aria-pressed', String(showNewOrders));
+        document.getElementById('cancelOrderTab').setAttribute('aria-pressed', String(!showNewOrders));
+    }
 
     // Fungsi pembersihan string nomor order
     function bersihkanOrder(val) {
